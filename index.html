@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>FXバックテスト試作</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#131e30;--line:#2a3a52;--text:#e9f0fa;--muted:#a8b6c9;--accent:#5c9dff;--green:#44d6a3;--red:#ff7f87}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#0b1220,#101a2b 65%,#0a1321);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:850px;margin:auto;padding:22px 16px 56px}header{padding:12px 2px 20px}h1{font-size:clamp(25px,7vw,36px);line-height:1.2;margin:0 0 9px}p{margin:8px 0;color:var(--muted)}.tag{display:inline-block;border:1px solid #315782;border-radius:99px;padding:3px 10px;color:#a9d0ff;font-size:13px}
+.card{background:rgba(19,30,48,.95);border:1px solid var(--line);border-radius:16px;padding:17px;margin:12px 0;box-shadow:0 12px 35px #0002}h2{font-size:18px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}input,textarea,button{font:inherit}input[type=number]{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#0b1422;color:var(--text)}textarea{width:100%;min-height:190px;resize:vertical;border:1px solid var(--line);border-radius:11px;padding:12px;background:#0b1422;color:#d9e6f8;font:13px/1.5 ui-monospace,monospace}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}button,.filebtn{border:0;border-radius:10px;background:var(--accent);color:#071326;padding:11px 15px;font-weight:700;cursor:pointer}.secondary{background:#263750;color:var(--text);border:1px solid #3a506d}.filebtn input{display:none}.notice{font-size:13px;border-left:3px solid #e6b85c;padding:8px 11px;background:#241f18;color:#e9d9b4;border-radius:5px}
+.results{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:12px 10px;border-radius:11px;background:#0c1625;border:1px solid #24344a}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
+.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted)}.pos{color:var(--green)}.neg{color:var(--red)}.error{color:var(--red);margin-top:10px;min-height:1em}
+@media(max-width:560px){main{padding:16px 12px 40px}.card{padding:14px}.results{grid-template-columns:repeat(2,1fr)}.grid{gap:10px}}
+</style>
+</head>
+<body><main>
+<header><span class="tag">学習用・バックテストのみ</span><h1>FX売買ルール検証</h1><p>CSVを読み込み、移動平均線クロスの簡易検証を行います。実口座への接続・注文はありません。</p></header>
+<section class="card"><h2>条件</h2><div class="grid">
+<div class="field"><label for="fast">短期移動平均（本）</label><input id="fast" type="number" min="1" value="3"></div>
+<div class="field"><label for="slow">長期移動平均（本）</label><input id="slow" type="number" min="2" value="5"></div>
+<div class="field"><label for="pip">1 pip の価格幅</label><input id="pip" type="number" min="0.000001" step="0.001" value="0.01"></div>
+<div class="field"><label for="spread">スプレッド（pips/往復）</label><input id="spread" type="number" min="0" step="0.1" value="1"></div>
+<div class="field"><label for="slippage">スリッページ（pips/片道）</label><input id="slippage" type="number" min="0" step="0.1" value="0.2"></div>
+</div></section>
+<section class="card"><h2>過去データ CSV</h2><p>列名は timestamp, open, high, low, close。USD/JPYなどのOHLCデータを貼り付けるか、CSVファイルを選択してください。</p>
+<textarea id="csv" spellcheck="false" aria-label="OHLC CSV"></textarea>
+<div class="actions"><button id="run">バックテストを実行</button><button class="secondary" id="sample">サンプルデータを戻す</button><label class="filebtn secondary">CSVファイルを選択<input id="file" type="file" accept=".csv,text/csv"></label></div><div id="error" class="error" role="alert"></div></section>
+<section class="card"><h2>結果</h2><div class="results" id="metrics"><div class="metric"><span>取引数</span><strong>—</strong></div><div class="metric"><span>勝率</span><strong>—</strong></div><div class="metric"><span>損益合計</span><strong>—</strong></div><div class="metric"><span>プロフィットファクター</span><strong>—</strong></div></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>新規時刻</th><th>決済時刻</th><th>新規価格</th><th>決済価格</th><th>損益（pips）</th></tr></thead><tbody id="trades"><tr><td colspan="5">条件を設定して実行してください。</td></tr></tbody></table></div></section>
+<p class="notice">結果は将来の利益を保証しません。サンプルは架空データです。この簡易版は買いのみで、資金量・ポジションサイズ・スワップ・税金・約定拒否などを考慮しません。口座番号やAPIキーを入力しないでください。</p>
+</main>
+<script>
+const sample = `timestamp,open,high,low,close
+2026-01-01T00:00,150.00,150.04,149.98,150.02
+2026-01-01T01:00,150.02,150.08,150.01,150.06
+2026-01-01T02:00,150.06,150.10,150.04,150.08
+2026-01-01T03:00,150.08,150.09,150.00,150.02
+2026-01-01T04:00,150.02,150.04,149.96,149.98
+2026-01-01T05:00,149.98,150.00,149.90,149.92
+2026-01-01T06:00,149.92,149.96,149.90,149.95
+2026-01-01T07:00,149.95,150.05,149.94,150.03
+2026-01-01T08:00,150.03,150.12,150.02,150.10
+2026-01-01T09:00,150.10,150.14,150.06,150.08
+2026-01-01T10:00,150.08,150.10,150.00,150.02
+2026-01-01T11:00,150.02,150.04,149.94,149.96`;
+const $=id=>document.getElementById(id);
+$("csv").value=sample;
+function parseCSV(text){
+ const lines=text.trim().split(/\r?\n/); if(lines.length<4) throw Error("ヘッダーと3行以上の価格データが必要です。");
+ const head=lines[0].split(",").map(s=>s.trim().toLowerCase());
+ const ix=Object.fromEntries(["timestamp","open","high","low","close"].map(k=>[k,head.indexOf(k)]));
+ if(Object.values(ix).some(i=>i<0)) throw Error("CSVの列名を timestamp,open,high,low,close にしてください。");
+ return lines.slice(1).filter(Boolean).map((line,n)=>{
+  const cols=line.split(","); const b={timestamp:(cols[ix.timestamp]||"").trim()};
+  for(const k of ["open","high","low","close"]) b[k]=Number(cols[ix[k]]);
+  if(!b.timestamp||Object.values(b).slice(1).some(v=>!Number.isFinite(v)||v<=0)) throw Error((n+2)+"行目の値を確認してください。");
+  if(b.high<Math.max(b.open,b.close,b.low)||b.low>Math.min(b.open,b.close,b.high)) throw Error((n+2)+"行目のOHLC値が不正です。");
+  return b;
+ });
+}
+function sma(a,end,n){let s=0;for(let j=end-n+1;j<=end;j++)s+=a[j].close;return s/n}
+function run(){
+ $("error").textContent="";
+ try{
+  const bars=parseCSV($("csv").value), fast=Number($("fast").value), slow=Number($("slow").value), pip=Number($("pip").value), spread=Number($("spread").value), slip=Number($("slippage").value);
+  if(!Number.isInteger(fast)||!Number.isInteger(slow)||fast<1||slow<=fast)throw Error("移動平均は 1 ≤ 短期 < 長期 にしてください。");
+  if(!Number.isFinite(pip)||pip<=0||spread<0||slip<0)throw Error("pip幅とコストの値を確認してください。");
+  if(bars.length<=slow)throw Error("データ数が長期移動平均の期間より少ないです。");
+  const trades=[];let pos=null;
+  for(let i=slow+1;i<bars.length;i++){
+   const a=i-1,b=i-2, up=sma(bars,a,fast)>sma(bars,a,slow)&&sma(bars,b,fast)<=sma(bars,b,slow), down=sma(bars,a,fast)<sma(bars,a,slow)&&sma(bars,b,fast)>=sma(bars,b,slow);
+   if(!pos&&up)pos={i,price:bars[i].open};
+   else if(pos&&down){const out=bars[i].open;trades.push({entry:bars[pos.i],exit:bars[i],pips:(out-pos.price)/pip-spread-2*slip,open:pos.price,close:out});pos=null}
+  }
+  if(pos){const out=bars.at(-1).close;trades.push({entry:bars[pos.i],exit:bars.at(-1),pips:(out-pos.price)/pip-spread-2*slip,open:pos.price,close:out})}
+  const wins=trades.filter(t=>t.pips>0), losses=trades.filter(t=>t.pips<0), net=trades.reduce((s,t)=>s+t.pips,0), lossSum=Math.abs(losses.reduce((s,t)=>s+t.pips,0)), winSum=wins.reduce((s,t)=>s+t.pips,0), pf=lossSum? (winSum/lossSum).toFixed(2):(winSum?"∞":"0.00");
+  $("metrics").innerHTML=[["取引数",trades.length],["勝率",trades.length?(wins.length/trades.length*100).toFixed(1)+"%":"0.0%"],["損益合計",net.toFixed(1)+" pips"],["プロフィットファクター",pf]].map(([k,v])=>'<div class="metric"><span>'+k+'</span><strong>'+v+'</strong></div>').join("");
+  $("trades").innerHTML=trades.length?trades.map(t=>'<tr><td>'+t.entry.timestamp+'</td><td>'+t.exit.timestamp+'</td><td>'+t.open.toFixed(3)+'</td><td>'+t.close.toFixed(3)+'</td><td class="'+(t.pips>=0?"pos":"neg")+'">'+t.pips.toFixed(1)+'</td></tr>').join(""):'<tr><td colspan="5">条件に合う取引はありません。</td></tr>';
+ }catch(e){$("error").textContent=e.message}
+}
+$("run").addEventListener("click",run);
+$("sample").addEventListener("click",()=>{$("csv").value=sample;run()});
+$("file").addEventListener("change",async e=>{const f=e.target.files[0];if(f)$("csv").value=await f.text()});
+run();
+</script></body></html>
