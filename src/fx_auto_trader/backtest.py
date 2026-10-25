@@ -22,6 +22,7 @@ class Trade:
     entry_price: float
     exit_price: float
     net_pips: float
+    net_yen: float
 
 
 def load_csv(path: str | Path) -> list[Bar]:
@@ -51,12 +52,13 @@ def run_sma_backtest(
     pip_size: float = 0.01,
     spread_pips: float = 1.0,
     slippage_pips: float = 0.2,
+    units: int = 10_000,
 ) -> list[Trade]:
     """Enter/exit long at the next bar's open after a close-confirmed SMA cross."""
     if fast_period < 1 or slow_period <= fast_period:
         raise ValueError("Require 1 <= fast_period < slow_period.")
-    if pip_size <= 0 or spread_pips < 0 or slippage_pips < 0:
-        raise ValueError("pip_size must be positive; costs cannot be negative.")
+    if pip_size <= 0 or spread_pips < 0 or slippage_pips < 0 or units < 1:
+        raise ValueError("pip_size and units must be positive; costs cannot be negative.")
     if len(bars) <= slow_period:
         raise ValueError("Not enough bars for the selected slow_period.")
 
@@ -80,14 +82,14 @@ def run_sma_backtest(
             entry_i, entry = position
             exit_price = bars[i].open
             net = (exit_price - entry) / pip_size - spread_pips - 2 * slippage_pips
-            trades.append(Trade(bars[entry_i].timestamp, bars[i].timestamp, entry, exit_price, net))
+            trades.append(Trade(bars[entry_i].timestamp, bars[i].timestamp, entry, exit_price, net, net * pip_size * units))
             position = None
 
     if position is not None:
         entry_i, entry = position
         exit_price = bars[-1].close
         net = (exit_price - entry) / pip_size - spread_pips - 2 * slippage_pips
-        trades.append(Trade(bars[entry_i].timestamp, bars[-1].timestamp, entry, exit_price, net))
+        trades.append(Trade(bars[entry_i].timestamp, bars[-1].timestamp, entry, exit_price, net, net * pip_size * units))
     return trades
 
 
@@ -99,5 +101,6 @@ def summarize(trades: list[Trade]) -> dict[str, float | int]:
         "trade_count": len(net),
         "win_rate_pct": round(100 * len(wins) / len(net), 2) if net else 0.0,
         "net_pips": round(sum(net), 2),
+        "net_yen": round(sum(trade.net_yen for trade in trades)),
         "profit_factor": round(sum(wins) / abs(sum(losses)), 2) if losses else (float("inf") if wins else 0.0),
     }
