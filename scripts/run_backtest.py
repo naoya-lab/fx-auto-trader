@@ -11,6 +11,7 @@ def main() -> None:
     parser.add_argument("--slow", type=int, default=5, help="slow SMA period (default: 5)")
     parser.add_argument("--spread", type=float, default=1.0, help="spread cost in pips (default: 1)")
     parser.add_argument("--slippage", type=float, default=0.2, help="slippage per side in pips (default: 0.2)")
+    parser.add_argument("--units", type=int, default=10_000, help="trade size in currency units (default: 10000)")
     args = parser.parse_args()
 
     bars = load_csv(args.csv_file)
@@ -20,6 +21,7 @@ def main() -> None:
         slow_period=args.slow,
         spread_pips=args.spread,
         slippage_pips=args.slippage,
+        units=args.units,
     )
     print("Summary:", summarize(trades))
     print("Trades:")
@@ -27,7 +29,7 @@ def main() -> None:
         print(
             f"{trade.entry_time} -> {trade.exit_time}: "
             f"{trade.entry_price:.3f} -> {trade.exit_price:.3f}; "
-            f"net {trade.net_pips:.1f} pips"
+            f"net {trade.net_pips:.1f} pips / ¥{trade.net_yen:,.0f}"
         )
 
 
