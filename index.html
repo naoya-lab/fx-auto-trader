@@ -11,7 +11,7 @@
 main{max-width:850px;margin:auto;padding:22px 16px 56px}header{padding:12px 2px 20px}h1{font-size:clamp(25px,7vw,36px);line-height:1.2;margin:0 0 9px}p{margin:8px 0;color:var(--muted)}.tag{display:inline-block;border:1px solid #315782;border-radius:99px;padding:3px 10px;color:#a9d0ff;font-size:13px}
 .card{background:rgba(19,30,48,.95);border:1px solid var(--line);border-radius:16px;padding:17px;margin:12px 0;box-shadow:0 12px 35px #0002}h2{font-size:18px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}input,textarea,button{font:inherit}input[type=number]{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#0b1422;color:var(--text)}textarea{width:100%;min-height:190px;resize:vertical;border:1px solid var(--line);border-radius:11px;padding:12px;background:#0b1422;color:#d9e6f8;font:13px/1.5 ui-monospace,monospace}
 .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}button,.filebtn{border:0;border-radius:10px;background:var(--accent);color:#071326;padding:11px 15px;font-weight:700;cursor:pointer}.secondary{background:#263750;color:var(--text);border:1px solid #3a506d}.filebtn input{display:none}.notice{font-size:13px;border-left:3px solid #e6b85c;padding:8px 11px;background:#241f18;color:#e9d9b4;border-radius:5px}
-.results{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:12px 10px;border-radius:11px;background:#0c1625;border:1px solid #24344a}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
+.results{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.metric{padding:12px 10px;border-radius:11px;background:#0c1625;border:1px solid #24344a}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:19px;margin-top:3px;overflow-wrap:anywhere}
 .tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted)}.pos{color:var(--green)}.neg{color:var(--red)}.error{color:var(--red);margin-top:10px;min-height:1em}
 @media(max-width:560px){main{padding:16px 12px 40px}.card{padding:14px}.results{grid-template-columns:repeat(2,1fr)}.grid{gap:10px}}
 </style>
@@ -24,12 +24,13 @@ main{max-width:850px;margin:auto;padding:22px 16px 56px}header{padding:12px 2px 
 <div class="field"><label for="pip">1 pip の価格幅</label><input id="pip" type="number" min="0.000001" step="0.001" value="0.01"></div>
 <div class="field"><label for="spread">スプレッド（pips/往復）</label><input id="spread" type="number" min="0" step="0.1" value="1"></div>
 <div class="field"><label for="slippage">スリッページ（pips/片道）</label><input id="slippage" type="number" min="0" step="0.1" value="0.2"></div>
+<div class="field"><label for="units">取引数量（通貨単位）</label><input id="units" type="number" min="1" step="1000" value="10000"></div>
 </div></section>
-<section class="card"><h2>過去データ CSV</h2><p>列名は timestamp, open, high, low, close。USD/JPYなどのOHLCデータを貼り付けるか、CSVファイルを選択してください。</p>
+<section class="card"><h2>過去データ CSV</h2><p>列名は timestamp, open, high, low, close。JPYが決済通貨のペア（例：USD/JPY）のデータで円損益を計算できます。</p>
 <textarea id="csv" spellcheck="false" aria-label="OHLC CSV"></textarea>
 <div class="actions"><button id="run">バックテストを実行</button><button class="secondary" id="sample">サンプルデータを戻す</button><label class="filebtn secondary">CSVファイルを選択<input id="file" type="file" accept=".csv,text/csv"></label></div><div id="error" class="error" role="alert"></div></section>
-<section class="card"><h2>結果</h2><div class="results" id="metrics"><div class="metric"><span>取引数</span><strong>—</strong></div><div class="metric"><span>勝率</span><strong>—</strong></div><div class="metric"><span>損益合計</span><strong>—</strong></div><div class="metric"><span>プロフィットファクター</span><strong>—</strong></div></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>新規時刻</th><th>決済時刻</th><th>新規価格</th><th>決済価格</th><th>損益（pips）</th></tr></thead><tbody id="trades"><tr><td colspan="5">条件を設定して実行してください。</td></tr></tbody></table></div></section>
-<p class="notice">結果は将来の利益を保証しません。サンプルは架空データです。この簡易版は買いのみで、資金量・ポジションサイズ・スワップ・税金・約定拒否などを考慮しません。口座番号やAPIキーを入力しないでください。</p>
+<section class="card"><h2>結果</h2><div class="results" id="metrics"><div class="metric"><span>取引数</span><strong>—</strong></div><div class="metric"><span>勝率</span><strong>—</strong></div><div class="metric"><span>損益合計</span><strong>—</strong></div><div class="metric"><span>プロフィットファクター</span><strong>—</strong></div></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>新規時刻</th><th>決済時刻</th><th>新規価格</th><th>決済価格</th><th>損益（pips）</th><th>損益（円）</th></tr></thead><tbody id="trades"><tr><td colspan="6">条件を設定して実行してください。</td></tr></tbody></table></div></section>
+<p class="notice">円換算はJPYが決済通貨のペア向けです。取引数量1万通貨は初期値の例で変更できます。買いのみで、必要証拠金・資金量・スワップ・税金・約定拒否などは考慮しません。口座番号やAPIキーを入力しないでください。</p>
 </main>
 <script>
 const sample = `timestamp,open,high,low,close
@@ -64,20 +65,20 @@ function sma(a,end,n){let s=0;for(let j=end-n+1;j<=end;j++)s+=a[j].close;return 
 function run(){
  $("error").textContent="";
  try{
-  const bars=parseCSV($("csv").value), fast=Number($("fast").value), slow=Number($("slow").value), pip=Number($("pip").value), spread=Number($("spread").value), slip=Number($("slippage").value);
+  const bars=parseCSV($("csv").value), fast=Number($("fast").value), slow=Number($("slow").value), pip=Number($("pip").value), spread=Number($("spread").value), slip=Number($("slippage").value), units=Number($("units").value);
   if(!Number.isInteger(fast)||!Number.isInteger(slow)||fast<1||slow<=fast)throw Error("移動平均は 1 ≤ 短期 < 長期 にしてください。");
-  if(!Number.isFinite(pip)||pip<=0||spread<0||slip<0)throw Error("pip幅とコストの値を確認してください。");
+  if(!Number.isFinite(pip)||pip<=0||spread<0||slip<0||!Number.isInteger(units)||units<1)throw Error("pip幅・コスト・取引数量を確認してください。");
   if(bars.length<=slow)throw Error("データ数が長期移動平均の期間より少ないです。");
   const trades=[];let pos=null;
   for(let i=slow+1;i<bars.length;i++){
    const a=i-1,b=i-2, up=sma(bars,a,fast)>sma(bars,a,slow)&&sma(bars,b,fast)<=sma(bars,b,slow), down=sma(bars,a,fast)<sma(bars,a,slow)&&sma(bars,b,fast)>=sma(bars,b,slow);
    if(!pos&&up)pos={i,price:bars[i].open};
-   else if(pos&&down){const out=bars[i].open;trades.push({entry:bars[pos.i],exit:bars[i],pips:(out-pos.price)/pip-spread-2*slip,open:pos.price,close:out});pos=null}
+   else if(pos&&down){const out=bars[i].open;trades.push({entry:bars[pos.i],exit:bars[i],pips:(out-pos.price)/pip-spread-2*slip,yen:((out-pos.price)/pip-spread-2*slip)*pip*units,open:pos.price,close:out});pos=null}
   }
-  if(pos){const out=bars.at(-1).close;trades.push({entry:bars[pos.i],exit:bars.at(-1),pips:(out-pos.price)/pip-spread-2*slip,open:pos.price,close:out})}
-  const wins=trades.filter(t=>t.pips>0), losses=trades.filter(t=>t.pips<0), net=trades.reduce((s,t)=>s+t.pips,0), lossSum=Math.abs(losses.reduce((s,t)=>s+t.pips,0)), winSum=wins.reduce((s,t)=>s+t.pips,0), pf=lossSum? (winSum/lossSum).toFixed(2):(winSum?"∞":"0.00");
-  $("metrics").innerHTML=[["取引数",trades.length],["勝率",trades.length?(wins.length/trades.length*100).toFixed(1)+"%":"0.0%"],["損益合計",net.toFixed(1)+" pips"],["プロフィットファクター",pf]].map(([k,v])=>'<div class="metric"><span>'+k+'</span><strong>'+v+'</strong></div>').join("");
-  $("trades").innerHTML=trades.length?trades.map(t=>'<tr><td>'+t.entry.timestamp+'</td><td>'+t.exit.timestamp+'</td><td>'+t.open.toFixed(3)+'</td><td>'+t.close.toFixed(3)+'</td><td class="'+(t.pips>=0?"pos":"neg")+'">'+t.pips.toFixed(1)+'</td></tr>').join(""):'<tr><td colspan="5">条件に合う取引はありません。</td></tr>';
+  if(pos){const out=bars.at(-1).close;trades.push({entry:bars[pos.i],exit:bars.at(-1),pips:(out-pos.price)/pip-spread-2*slip,yen:((out-pos.price)/pip-spread-2*slip)*pip*units,open:pos.price,close:out})}
+  const wins=trades.filter(t=>t.pips>0), losses=trades.filter(t=>t.pips<0), net=trades.reduce((s,t)=>s+t.pips,0), netYen=trades.reduce((s,t)=>s+t.yen,0), lossSum=Math.abs(losses.reduce((s,t)=>s+t.pips,0)), winSum=wins.reduce((s,t)=>s+t.pips,0), pf=lossSum? (winSum/lossSum).toFixed(2):(winSum?"∞":"0.00");
+  $("metrics").innerHTML=[["取引数",trades.length],["勝率",trades.length?(wins.length/trades.length*100).toFixed(1)+"%":"0.0%"],["損益合計",net.toFixed(1)+" pips"],["損益合計（円）","¥"+Math.round(netYen).toLocaleString("ja-JP")],["プロフィットファクター",pf]].map(([k,v])=>'<div class="metric"><span>'+k+'</span><strong>'+v+'</strong></div>').join("");
+  $("trades").innerHTML=trades.length?trades.map(t=>'<tr><td>'+t.entry.timestamp+'</td><td>'+t.exit.timestamp+'</td><td>'+t.open.toFixed(3)+'</td><td>'+t.close.toFixed(3)+'</td><td class="'+(t.pips>=0?"pos":"neg")+'">'+t.pips.toFixed(1)+'</td><td class="'+(t.yen>=0?"pos":"neg")+'">¥'+Math.round(t.yen).toLocaleString("ja-JP")+'</td></tr>').join(""):'<tr><td colspan="6">条件に合う取引はありません。</td></tr>';
  }catch(e){$("error").textContent=e.message}
 }
 $("run").addEventListener("click",run);
