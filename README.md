@@ -6,10 +6,11 @@ iPhoneから開発し、まずは過去データで売買ルールを試すた�
 
 - CSV形式のOHLCデータ読み込み
 - 短期・長期移動平均線のクロスを使う、買いのみの簡易バックテスト
-- スプレッドとスリッページを差し引いた損益（pips）集計
+- スプレッドとスリッページを差し引いた損益（pips・円）集計
+- 取引数量の指定（初期値は例として1万通貨）
 - サンプルデータと、実行用スクリプト
 
-売買シグナルは確定した足の後、次の足の始値で約定する簡易ルールです。ポジションサイズ、資金曲線、スワップ、税金、約定拒否などはまだ扱いません。サンプルデータは動作確認用の架空データで、収益性を示すものではありません。
+売買シグナルは確定した足の後、次の足の始値で約定する簡易ルールです。円損益はJPYが決済通貨のペア（例：USD/JPY）を前提に、損益pips × pip幅 × 取引数量で計算します。初期取引数量1万通貨は例なので変更できます。必要証拠金、資金曲線、スワップ、税金、約定拒否などは未対応です。サンプルデータは架空データです。
 
 ## Codespacesで動かす
 
@@ -28,10 +29,10 @@ python scripts/run_backtest.py data/sample_ohlc.csv
 期間やコストを変える例：
 
 ```bash
-python scripts/run_backtest.py data/sample_ohlc.csv --fast 3 --slow 5 --spread 1.0 --slippage 0.2
+python scripts/run_backtest.py data/sample_ohlc.csv --fast 3 --slow 5 --spread 1.0 --slippage 0.2 --units 10000
 ```
 
-CSVは `timestamp,open,high,low,close` の列を用意してください。USD/JPYの標準的なpip幅を想定して初期値を0.01にしています。別通貨ペアではコード側の `pip_size` を適切に変更してください。
+CSVは `timestamp,open,high,low,close` の列を用意してください。円損益の計算はJPYが決済通貨のペアで使用してください。USD/JPYのpip幅は0.01を想定しています。別通貨ペアでは円換算に別の為替レートが必要です。
 
 ## テスト
 
