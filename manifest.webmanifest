@@ -1,0 +1,18 @@
+{
+  "name": "FX売買ルール検証",
+  "short_name": "FX検証",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#17233d",
+  "theme_color": "#17233d",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
