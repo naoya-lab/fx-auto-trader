@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,8 +32,8 @@ def load_csv(path: str | Path) -> list[Bar]:
     with Path(path).open(newline="", encoding="utf-8-sig") as handle:
         for row in csv.DictReader(handle):
             bar = Bar(row["timestamp"], *(float(row[k]) for k in ("open", "high", "low", "close")))
-            if min(bar.open, bar.high, bar.low, bar.close) <= 0:
-                raise ValueError(f"Prices must be positive: {bar.timestamp}")
+            if not all(math.isfinite(price) and price > 0 for price in (bar.open, bar.high, bar.low, bar.close)):
+                raise ValueError(f"Prices must be finite and positive: {bar.timestamp}")
             if bar.high < max(bar.open, bar.close, bar.low) or bar.low > min(bar.open, bar.close, bar.high):
                 raise ValueError(f"Invalid OHLC values: {bar.timestamp}")
             bars.append(bar)
@@ -57,7 +58,7 @@ def run_sma_backtest(
     """Enter/exit long at the next bar's open after a close-confirmed SMA cross."""
     if fast_period < 1 or slow_period <= fast_period:
         raise ValueError("Require 1 <= fast_period < slow_period.")
-    if pip_size <= 0 or spread_pips < 0 or slippage_pips < 0 or units < 1:
+    if not all(math.isfinite(value) for value in (pip_size, spread_pips, slippage_pips, units)) or pip_size <= 0 or spread_pips < 0 or slippage_pips < 0 or units < 1:
         raise ValueError("pip_size and units must be positive; costs cannot be negative.")
     if len(bars) <= slow_period:
         raise ValueError("Not enough bars for the selected slow_period.")
