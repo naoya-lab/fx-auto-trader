@@ -51,6 +51,7 @@ const sample = `timestamp,open,high,low,close
 2026-01-01T11:00,150.02,150.04,149.94,149.96`;
 const $=id=>document.getElementById(id);
 $("csv").value=sample;
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function parseCSV(text){
  const lines=text.trim().split(/\r?\n/); if(lines.length<4) throw Error("ヘッダーと3行以上の価格データが必要です。");
  const head=lines[0].split(",").map(s=>s.trim().toLowerCase());
@@ -70,7 +71,7 @@ function run(){
  try{
   const bars=parseCSV($("csv").value), fast=Number($("fast").value), slow=Number($("slow").value), pip=Number($("pip").value), spread=Number($("spread").value), slip=Number($("slippage").value), units=Number($("units").value);
   if(!Number.isInteger(fast)||!Number.isInteger(slow)||fast<1||slow<=fast)throw Error("移動平均は 1 ≤ 短期 < 長期 にしてください。");
-  if(!Number.isFinite(pip)||pip<=0||spread<0||slip<0||!Number.isInteger(units)||units<1)throw Error("pip幅・コスト・取引数量を確認してください。");
+  if(!Number.isFinite(pip)||!Number.isFinite(spread)||!Number.isFinite(slip)||pip<=0||spread<0||slip<0||!Number.isInteger(units)||units<1)throw Error("pip幅・コスト・取引数量を確認してください。");
   if(bars.length<=slow)throw Error("データ数が長期移動平均の期間より少ないです。");
   const trades=[];let pos=null;
   for(let i=slow+1;i<bars.length;i++){
@@ -81,7 +82,7 @@ function run(){
   if(pos){const out=bars.at(-1).close;trades.push({entry:bars[pos.i],exit:bars.at(-1),pips:(out-pos.price)/pip-spread-2*slip,yen:((out-pos.price)/pip-spread-2*slip)*pip*units,open:pos.price,close:out})}
   const wins=trades.filter(t=>t.pips>0), losses=trades.filter(t=>t.pips<0), net=trades.reduce((s,t)=>s+t.pips,0), netYen=trades.reduce((s,t)=>s+t.yen,0), lossSum=Math.abs(losses.reduce((s,t)=>s+t.pips,0)), winSum=wins.reduce((s,t)=>s+t.pips,0), pf=lossSum? (winSum/lossSum).toFixed(2):(winSum?"∞":"0.00");
   $("metrics").innerHTML=[["取引数",trades.length],["勝率",trades.length?(wins.length/trades.length*100).toFixed(1)+"%":"0.0%"],["損益合計",net.toFixed(1)+" pips"],["損益合計（円）","¥"+Math.round(netYen).toLocaleString("ja-JP")],["プロフィットファクター",pf]].map(([k,v])=>'<div class="metric"><span>'+k+'</span><strong>'+v+'</strong></div>').join("");
-  $("trades").innerHTML=trades.length?trades.map(t=>'<tr><td>'+t.entry.timestamp+'</td><td>'+t.exit.timestamp+'</td><td>'+t.open.toFixed(3)+'</td><td>'+t.close.toFixed(3)+'</td><td class="'+(t.pips>=0?"pos":"neg")+'">'+t.pips.toFixed(1)+'</td><td class="'+(t.yen>=0?"pos":"neg")+'">¥'+Math.round(t.yen).toLocaleString("ja-JP")+'</td></tr>').join(""):'<tr><td colspan="6">条件に合う取引はありません。</td></tr>';
+  $("trades").innerHTML=trades.length?trades.map(t=>'<tr><td>'+escapeHtml(t.entry.timestamp)+'</td><td>'+escapeHtml(t.exit.timestamp)+'</td><td>'+t.open.toFixed(3)+'</td><td>'+t.close.toFixed(3)+'</td><td class="'+(t.pips>=0?"pos":"neg")+'">'+t.pips.toFixed(1)+'</td><td class="'+(t.yen>=0?"pos":"neg")+'">¥'+Math.round(t.yen).toLocaleString("ja-JP")+'</td></tr>').join(""):'<tr><td colspan="6">条件に合う取引はありません。</td></tr>';
  }catch(e){$("error").textContent=e.message}
 }
 $("run").addEventListener("click",run);

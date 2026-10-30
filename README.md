@@ -37,8 +37,11 @@ CSVは `timestamp,open,high,low,close` の列を用意してください。円�
 ## テスト
 
 ```bash
-python -m unittest discover -s tests -v
+PYTHONPATH=src python -m unittest discover -s tests -v
+node --test tests/browser.test.cjs
 ```
+
+ブラウザ側の回帰テストにはNode.js 18以上を使用します。
 
 ## 安全上の範囲
 
